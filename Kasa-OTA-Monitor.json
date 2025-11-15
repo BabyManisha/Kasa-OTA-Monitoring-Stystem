@@ -1,0 +1,249 @@
+{
+  "name": "Kasa-OTA-Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "https://drive.google.com/drive/u/0/folders/1zmpRlBOXlS4XzxXL62LIYQz5OXEQlp9Q",
+          "mode": "url"
+        },
+        "event": "fileUpdated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "48a693ab-abee-42c1-ae28-2c9798183469",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "bBOWNkhGfieWLnuf",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{$json[\"fileId\"] || $json[\"id\"]}}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e19bf640-c0d3-4b70-b36e-f45e429bd206",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "bBOWNkhGfieWLnuf",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/analyze",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "42bc17aa-4111-423b-8892-f3141501f203",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b64 = items[0].json.file_base64;\nconst fileName = items[0].json.file_name;\n\nreturn [{\n  json: {\n    fileName\n  },\n  binary: {\n    data: {\n      data: Buffer.from(b64, 'base64'),\n      fileName,\n      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        272
+      ],
+      "id": "f9e300fa-7afe-46bc-b8a8-a6bed7e3d222",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "name": "={{$json[\"fileName\"]}}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "https://drive.google.com/drive/u/0/folders/1iFU5LRjUsi0g2_B0FlwDR2ZDJWZuClV3",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        208,
+        256
+      ],
+      "id": "7decda37-9d2c-4ad2-8f89-810877313208",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "bBOWNkhGfieWLnuf",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        256
+      ],
+      "id": "7b18713a-8873-4972-94db-8ce1186fc79d",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "sendTo": "babymaneesha@gmail.com",
+        "subject": "Kasa OTA Monitoring System - Overview",
+        "emailType": "text",
+        "message": "={{ $('HTTP Request').item.json.llm_insights }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        640,
+        256
+      ],
+      "id": "e1e25f56-03b4-4e96-9fae-5fbbd083c2b8",
+      "name": "Send a message1",
+      "webhookId": "50542470-e044-4023-a83e-e8b638a363ae",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "hBZyRhXnHjrqzirr",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e26d3b03-78d1-4f1e-ab20-0c0a67aaa6a2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7a8ebc032c579f7871c8da876e83f41f64053507ccdfe4ef39aead3b37fb9254"
+  },
+  "id": "R1s3Wcahu4zQlK3O",
+  "tags": []
+}
